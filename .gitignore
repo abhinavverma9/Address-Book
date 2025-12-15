@@ -1,0 +1,29 @@
+# Node
+node_modules
+dist
+.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+.vscode
+.idea
+.toolstarget
+
+# ColdFusion
+*.cfc~
+*.cfm~
+*.cfml~
+*.lucee~
+*.lcf~
+
+# Others
+package-lock.json
+dump
