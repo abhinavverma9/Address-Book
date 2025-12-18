@@ -11,18 +11,75 @@
     <!--- Custom property for JWT Secret --->
     <cfset this.jwtSecret = variables.env.JWT_SECRET>
 
-    <!--- Define Datasource Programmatically (Lucee Syntax) --->
-    <cfset this.datasources["addressbook"] = {
-        "class": "org.postgresql.Driver",
-        "connectionString": "jdbc:postgresql://" & variables.env.DB_HOST & ":" & variables.env.DB_PORT & "/" & variables.env.DB_NAME & "?characterEncoding=UTF-8&ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory",
-        "username": variables.env.DB_USER,
-        "password": variables.env.DB_PASSWORD
+    <!--- ORM Configuration --->
+    <cfset this.ormEnabled = true>
+    <cfset this.ormSettings = {
+        datasource = "addressbook",
+        logsql = true,
+        dbcreate = "update",
+        cfclocation = "models",
+        dialect = "PostgreSQL"
     }>
+
+    <!--- Define Datasource --->
+    <cfif structKeyExists(variables.env, "DB_URL") AND len(variables.env.DB_URL) GT 10>
+        <!--- Simple Parse DB_URL: postgresql://user:pass@host:port/db --->
+        <!--- We use list operations for simplicity as regex can be brittle with special chars --->
+        
+        <cfset local.cleanUrl = replaceNoCase(variables.env.DB_URL, "postgresql://", "")>
+        <cfset local.authPart = listFirst(local.cleanUrl, "@")>
+        <cfset local.locPart = listRest(local.cleanUrl, "@")>
+        
+        <cfset local.dbUser = listFirst(local.authPart, ":")>
+        <cfset local.dbPass = listRest(local.authPart, ":")>
+        
+        <cfset this.datasources["addressbook"] = {
+            "class": "org.postgresql.Driver",
+            "connectionString": "jdbc:postgresql://" & local.locPart & "?sslmode=require",
+            "username": local.dbUser,
+            "password": local.dbPass
+        }>
+    <cfelse>
+        <cfset this.datasources["addressbook"] = {
+            "class": "org.postgresql.Driver",
+            "connectionString": "jdbc:postgresql://" & variables.env.DB_HOST & ":" & variables.env.DB_PORT & "/" & variables.env.DB_NAME & "?sslmode=require",
+            "username": variables.env.DB_USER,
+            "password": variables.env.DB_PASSWORD
+        }>
+    </cfif>
 
     <cffunction name="onApplicationStart" returnType="boolean" output="false">
         <cfset application.jwtSecret = this.jwtSecret>
         <cfset application.datasource = this.datasource>
+        
+        <cfset application.authMiddleware = createObject("component", "api.middlewares.AuthMiddleware").init(jwtSecret=application.jwtSecret)>
+        
+        <cftry>
+            <cfquery datasource="#this.datasource#">
+                SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE(MAX(id), 0) + 1, false) FROM users;
+                SELECT setval(pg_get_serial_sequence('contacts', 'id'), COALESCE(MAX(id), 0) + 1, false) FROM contacts;
+                SELECT setval(pg_get_serial_sequence('refresh_tokens', 'id'), COALESCE(MAX(id), 0) + 1, false) FROM refresh_tokens;
+            </cfquery>
+        <cfcatch type="any">
+        </cfcatch>
+        </cftry>
         <cfreturn true>
+    </cffunction>
+
+    <cffunction name="onError" returnType="void" output="false">
+        <cfargument name="exception" required="true">
+        <cfargument name="eventname" type="string" required="true">
+        
+        <cfheader statuscode="500" statustext="Internal Server Error">
+        <cfcontent type="application/json" reset="true">
+        <cfoutput>#serializeJSON({
+            "success": false,
+            "message": "An unexpected error occurred.",
+            "error": arguments.exception.message,
+            "detail": arguments.exception.detail ?: "",
+            "type": arguments.exception.type ?: ""
+        })#</cfoutput>
+        <cfabort>
     </cffunction>
 
     <cffunction name="onRequestStart" returnType="boolean" output="false">
@@ -37,21 +94,29 @@
             <cfabort>
         </cfif>
         
+        <!--- Auth Middleware --->
+        <cfset application.authMiddleware.authenticate(
+            path=CGI.SCRIPT_NAME & CGI.PATH_INFO,
+            headers=getHttpRequestData().headers,
+            urlScope=url,
+            formScope=form
+        )>
+
         <cfreturn true>
     </cffunction>
 
     <!--- Helper to load .env file --->
     <cffunction name="loadEnv" access="private" returntype="struct" output="false">
         <cfset var env = {}>
-        <cfset var envFile = expandPath("./.env")>
+        <cfset var envFile = getDirectoryFromPath(getCurrentTemplatePath()) & ".env">
         
-        <!--- Defaults --->
-        <cfset env.DB_HOST = "127.0.0.1">
-        <cfset env.DB_PORT = "5432">
-        <cfset env.DB_NAME = "addressbook">
-        <cfset env.DB_USER = "postgres">
+        <cfset env.DB_HOST = "">
+        <cfset env.DB_PORT = "">
+        <cfset env.DB_NAME = "">
+        <cfset env.DB_USER = "">
         <cfset env.DB_PASSWORD = "">
-        <cfset env.JWT_SECRET = "defaultSecret">
+        <cfset env.JWT_SECRET = "">
+        <cfset env.DB_URL = "">
         
         <cfif fileExists(envFile)>
             <cfset var fileContent = fileRead(envFile)>
