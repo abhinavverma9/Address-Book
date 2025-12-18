@@ -1,38 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaFacebookF, FaGoogle } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import Header from '../components/Header';
 import InputField from '../components/InputField';
 import AuthLayout from '../components/AuthLayout';
-import { login } from '../api/authService';
+import Spinner from '../components/Spinner';
+import { loginUser, clearError } from '../store/slices/authSlice';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  
+  const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
+
+  // Clear error on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+    dispatch(clearError());
 
     try {
-      const data = await login(username, password);
-      
-      if (data.success) {
-        localStorage.setItem('accessToken', data.token);
-        localStorage.setItem('refreshToken', data.refreshToken);
+      const resultAction = await dispatch(loginUser({ username, password }));
+      if (loginUser.fulfilled.match(resultAction)) {
         navigate('/dashboard');
-      } else {
-        setError(data.message || 'Login failed');
       }
     } catch (err) {
-      console.error(err);
-      setError('An error occurred during login. Please try again.');
-    } finally {
-      setLoading(false);
+      console.error('Login failed', err);
     }
   };
 
@@ -64,9 +72,9 @@ const Login = () => {
           <button 
             type="submit"
             disabled={loading}
-            className="w-48 py-3 rounded-full border border-[#2d7bc2] text-[#2d7bc2] font-bold text-sm tracking-wider hover:bg-[#2d7bc2] hover:text-white transition-all duration-300 mb-8 uppercase disabled:opacity-50"
+            className="w-48 py-3 rounded-full border border-[#2d7bc2] text-[#2d7bc2] font-bold text-sm tracking-wider hover:bg-[#2d7bc2] hover:text-white transition-all duration-300 mb-8 uppercase disabled:opacity-50 flex justify-center items-center"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? <Spinner size="small" color="blue" /> : 'Login'}
           </button>
         </form>
         

@@ -6,7 +6,7 @@ export const login = async (username, password) => {
   params.append('username', username);
   params.append('password', password);
 
-  const response = await api.post('/Auth.cfc', params);
+  const response = await api.post('/routes/Auth.cfc', params);
   return response.data;
 };
 
@@ -18,7 +18,7 @@ export const register = async (fullName, email, username, password) => {
   params.append('username', username);
   params.append('password', password);
 
-  const response = await api.post('/Auth.cfc', params);
+  const response = await api.post('/routes/Auth.cfc', params);
   return response.data;
 };
 
@@ -29,11 +29,16 @@ export const logout = async () => {
       params.append('method', 'logout');
       params.append('refreshToken', refreshToken);
       try {
-        await api.post('/Auth.cfc', params);
+        await api.post('/routes/Auth.cfc', params);
       } catch (e) {
         console.error("Logout API call failed", e);
       }
   }
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
+};
+
+export const getCurrentUser = async () => {
+    const response = await api.get('/routes/Auth.cfc?method=me');
+    return response.data;
 };
