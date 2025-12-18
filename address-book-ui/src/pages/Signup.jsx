@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import InputField from '../components/InputField';
 import AuthLayout from '../components/AuthLayout';
-import { register } from '../api/authService';
+import Spinner from '../components/Spinner';
+import { useDispatch, useSelector } from 'react-redux';
+import { registerUser, resetRegistration, clearError } from '../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 
 const Signup = () => {
@@ -13,9 +15,26 @@ const Signup = () => {
     password: '',
     confirmPassword: ''
   });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState(''); // For password mismatch
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  
+  const { loading, error, registrationSuccess } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+      dispatch(resetRegistration());
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (registrationSuccess) {
+      alert("Registration successful! Please login.");
+      navigate('/');
+      dispatch(resetRegistration());
+    }
+  }, [registrationSuccess, navigate, dispatch]);
 
   const handleChange = (e) => {
     setFormData({
@@ -26,35 +45,30 @@ const Signup = () => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setError('');
+    setLocalError('');
+    dispatch(clearError());
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+    if (!formData.fullName || !formData.email || !formData.username || !formData.password || !formData.confirmPassword) {
+      setLocalError("All fields are required");
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const data = await register(
-        formData.fullName,
-        formData.email,
-        formData.username,
-        formData.password
-      );
-
-      if (data.success) {
-        alert("Registration successful! Please login.");
-        navigate('/');
-      } else {
-        setError(data.message || 'Registration failed');
-      }
-    } catch (err) {
-      console.error(err);
-      setError('An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setLocalError("Invalid email format");
+      return;
     }
+
+    if (formData.password !== formData.confirmPassword) {
+      setLocalError("Passwords do not match");
+      return;
+    }
+
+    dispatch(registerUser({
+      fullName: formData.fullName,
+      email: formData.email,
+      username: formData.username,
+      password: formData.password
+    }));
   };
 
   return (
@@ -101,14 +115,14 @@ const Signup = () => {
             />
           </div>
           
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+          {(error || localError) && <p className="text-red-500 text-sm mb-4">{localError || error}</p>}
 
           <button 
             type="submit"
             disabled={loading}
-            className="w-48 py-3 rounded-full border border-[#2d7bc2] text-[#2d7bc2] font-bold text-sm tracking-wider hover:bg-[#2d7bc2] hover:text-white transition-all duration-300 mb-8 uppercase disabled:opacity-50"
+            className="w-48 py-3 rounded-full border border-[#2d7bc2] text-[#2d7bc2] font-bold text-sm tracking-wider hover:bg-[#2d7bc2] hover:text-white transition-all duration-300 mb-8 uppercase disabled:opacity-50 flex justify-center items-center"
           >
-            {loading ? 'Registering...' : 'REGISTER'}
+            {loading ? <Spinner size="small" color="blue" /> : 'REGISTER'}
           </button>
         </form>
       </AuthLayout>
