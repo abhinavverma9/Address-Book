@@ -33,6 +33,15 @@ export const createContact = async (contactData) => {
     return response.data;
 };
 
+export const bulkCreateContact = async (contacts) => {
+    const params = new URLSearchParams();
+    params.append('method', 'bulkCreateContact');
+    params.append('contacts', JSON.stringify(contacts));
+
+    const response = await api.post('/routes/Contact.cfc', params);
+    return response.data;
+};
+
 export const updateContact = async (id, contactData) => {
     const params = new URLSearchParams();
     params.append('method', 'updateContact');

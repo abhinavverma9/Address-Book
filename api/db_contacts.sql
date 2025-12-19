@@ -15,5 +15,6 @@ CREATE TABLE IF NOT EXISTS contacts (
     email VARCHAR(100),
     phone VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT unique_user_phone UNIQUE (user_id, phone)
 );

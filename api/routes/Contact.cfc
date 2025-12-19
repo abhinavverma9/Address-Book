@@ -139,6 +139,86 @@
         <cfreturn local.response>
     </cffunction>
 
+    <cffunction name="bulkCreateContact" access="remote" returntype="struct" returnformat="json" httpmethod="POST">
+        <cfargument name="contacts" type="string" required="true">
+
+        <cfset local.response = { "success" = false, "message" = "", "processed" = 0, "failed" = 0, "errors" = [] }>
+        
+        <cftry>
+            <cfif NOT structKeyExists(request, "userId")>
+                <cfthrow message="User ID missing. Authentication failed or bypassed.">
+            </cfif>
+            <cfset local.userId = request.userId>
+
+            <cfset local.user = entityLoadByPK("User", local.userId)>
+            <cfif isNull(local.user)>
+                <cfset local.response.message = "User not found">
+                <cfreturn local.response>
+            </cfif>
+
+            <cfset local.contactList = deserializeJSON(arguments.contacts)>
+            
+            <cfif NOT isArray(local.contactList)>
+                <cfthrow message="Invalid data format. Expected an array of contacts.">
+            </cfif>
+
+            <cfloop array="#local.contactList#" index="local.c">
+                <cftry>
+                    <cfif NOT structKeyExists(local.c, "firstName") OR NOT len(trim(local.c.firstName))>
+                        <cfthrow message="First Name is required.">
+                    </cfif>
+                    <cfif NOT structKeyExists(local.c, "lastName") OR NOT len(trim(local.c.lastName))>
+                        <cfthrow message="Last Name is required.">
+                    </cfif>
+                    <cfif NOT structKeyExists(local.c, "phone") OR NOT len(trim(local.c.phone))>
+                        <cfthrow message="Phone is required.">
+                    </cfif>
+                    
+                    <cfset local.existing = entityLoad("Contact", { user = local.user, phone = local.c.phone })>
+                    <cfif NOT arrayIsEmpty(local.existing)>
+                        <cfthrow message="Phone number already exists.">
+                    </cfif>
+
+                    <cfset local.contact = entityNew("Contact")>
+                    <cfset local.contact.setUser(local.user)>
+                    <cfset local.contact.setTitle(local.c.title ?: "")>
+                    <cfset local.contact.setFirstName(local.c.firstName)>
+                    <cfset local.contact.setLastName(local.c.lastName)>
+                    <cfset local.contact.setGender(local.c.gender ?: "")>
+                    
+                    <cfif structKeyExists(local.c, "dob") AND len(trim(local.c.dob))>
+                         <cfset local.contact.setDob(parseDate(local.c.dob))>
+                    </cfif>
+                    
+                    <cfset local.contact.setAddress(local.c.address ?: "")>
+                    <cfset local.contact.setStreet(local.c.street ?: "")>
+                    <cfset local.contact.setCity(local.c.city ?: "")>
+                    <cfset local.contact.setState(local.c.state ?: "")>
+                    <cfset local.contact.setPincode(local.c.pincode ?: "")>
+                    <cfset local.contact.setEmail(local.c.email ?: "")>
+                    <cfset local.contact.setPhone(local.c.phone)>
+                    
+                    <cfset entitySave(local.contact)>
+                    <cfset local.response.processed++>
+
+                <cfcatch type="any">
+                    <cfset local.response.failed++>
+                    <cfset arrayAppend(local.response.errors, "Error with " & (local.c.firstName ?: "Unknown") & ": " & cfcatch.message)>
+                </cfcatch>
+                </cftry>
+            </cfloop>
+            
+            <cfset local.response.success = true>
+            <cfset local.response.message = "Processed " & local.response.processed & " contacts. Failed: " & local.response.failed>
+
+        <cfcatch type="any">
+            <cfset local.response.message = "Error processing bulk upload: " & cfcatch.message>
+        </cfcatch>
+        </cftry>
+
+        <cfreturn local.response>
+    </cffunction>
+
     <cffunction name="updateContact" access="remote" returntype="struct" returnformat="json" httpmethod="PUT">
         <cfargument name="id" type="numeric" required="true">
         <cfargument name="title" type="string" required="false" default="">
@@ -206,6 +286,11 @@
             </cfif>
              <cfif len(trim(arguments.pincode)) AND (NOT isNumeric(arguments.pincode) OR len(trim(arguments.pincode)) NEQ 6)>
                  <cfthrow message="Pincode must be a 6-digit number.">
+            </cfif>
+
+            <cfset local.existing = entityLoad("Contact", { user = entityLoadByPK("User", local.userId), phone = arguments.phone })>
+            <cfif NOT arrayIsEmpty(local.existing) AND local.existing[1].getId() NEQ arguments.id>
+                 <cfthrow message="Phone number already exists.">
             </cfif>
 
             <cfset local.contact.setTitle(arguments.title)>

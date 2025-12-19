@@ -3,9 +3,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import ContactModal from '../components/ContactModal';
+import UploadModal from '../components/UploadModal';
 import ViewContactModal from '../components/ViewContactModal';
 import Spinner from '../components/Spinner';
-import { FaFilePdf, FaFileExcel, FaPrint, FaUserCircle } from 'react-icons/fa';
+import { FaFilePdf, FaFileExcel, FaPrint, FaUserCircle, FaCloudUploadAlt } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -32,6 +33,9 @@ const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentContact, setCurrentContact] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
+
+  // Upload Modal State
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // View Modal State
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -72,6 +76,14 @@ const Dashboard = () => {
       setIsModalOpen(false);
       setCurrentContact(null);
       setIsEditMode(false);
+  };
+
+  const handleOpenUploadModal = () => {
+      setIsUploadModalOpen(true);
+  };
+
+  const handleCloseUploadModal = () => {
+      setIsUploadModalOpen(false);
   };
 
   const handleOpenViewModal = (contact) => {
@@ -250,9 +262,15 @@ const Dashboard = () => {
                     
                     <button 
                         onClick={handleOpenCreateModal}
-                        className="bg-[#2d7bc2] text-white px-6 py-2 rounded-full font-bold text-sm tracking-wide hover:bg-[#1e6bb8] transition-colors shadow-sm uppercase"
+                        className="bg-[#2d7bc2] text-white px-6 py-2 rounded-full font-bold text-sm tracking-wide hover:bg-[#1e6bb8] transition-colors shadow-sm uppercase mb-3 w-full"
                     >
                         Create Contact
+                    </button>
+                    <button 
+                        onClick={handleOpenUploadModal}
+                        className="bg-white border border-[#2d7bc2] text-[#2d7bc2] px-6 py-2 rounded-full font-bold text-sm tracking-wide hover:bg-[#daeef7] transition-colors shadow-sm uppercase w-full flex items-center justify-center gap-2"
+                    >
+                        <FaCloudUploadAlt /> Bulk Upload
                     </button>
                 </div>
             </div>
@@ -345,6 +363,11 @@ const Dashboard = () => {
             onSubmit={handleModalSubmit}
             initialData={currentContact}
             isEditMode={isEditMode}
+        />
+
+        <UploadModal
+            isOpen={isUploadModalOpen}
+            onClose={handleCloseUploadModal}
         />
         
         <ViewContactModal

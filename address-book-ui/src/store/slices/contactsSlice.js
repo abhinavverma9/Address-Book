@@ -39,6 +39,22 @@ export const createContact = createAsyncThunk(
   }
 );
 
+export const bulkCreateContacts = createAsyncThunk(
+  'contacts/bulkCreate',
+  async (contacts, { rejectWithValue }) => {
+    try {
+      const response = await contactService.bulkCreateContact(contacts);
+      if (response.success) {
+        return response.message;
+      } else {
+        return rejectWithValue(response.message);
+      }
+    } catch (error) {
+      return rejectWithValue(error.message || 'Failed to bulk create contacts');
+    }
+  }
+);
+
 export const updateContact = createAsyncThunk(
   'contacts/update',
   async ({ id, data }, { rejectWithValue }) => {
@@ -117,6 +133,20 @@ const contactsSlice = createSlice({
         // we typically re-fetch in the component or rely on 'operationSuccess' to trigger a re-fetch.
       })
       .addCase(createContact.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Bulk Create
+      .addCase(bulkCreateContacts.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.operationSuccess = false;
+      })
+      .addCase(bulkCreateContacts.fulfilled, (state) => {
+        state.loading = false;
+        state.operationSuccess = true;
+      })
+      .addCase(bulkCreateContacts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
