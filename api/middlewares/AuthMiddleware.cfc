@@ -6,7 +6,6 @@
         
         <cfset variables.jwtSecret = arguments.jwtSecret>
         
-        <!--- Define public endpoints that don't require authentication --->
         <cfset variables.publicEndpoints = [
             "/auth/login",
             "/auth/register",

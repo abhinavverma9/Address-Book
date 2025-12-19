@@ -60,7 +60,6 @@
                 }>
                 <cfset local.accessToken = local.jwtUtil.encode(local.payload, application.jwtSecret)>
                 
-                <!--- Generate Refresh Token (7 days) --->
                 <cfset local.refreshTokenStr = createUUID()>
                 <cfset local.expiresAt = dateAdd("d", 7, now())>
                 

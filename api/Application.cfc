@@ -22,11 +22,11 @@
     }>
 
     <!--- Define Datasource --->
-    <cfif structKeyExists(variables.env, "DB_URL") AND len(variables.env.DB_URL) GT 10>
+    <!--- <cfif structKeyExists(variables.env, "DB_URL") AND len(variables.env.DB_URL) GT 10>
         <!--- Simple Parse DB_URL: postgresql://user:pass@host:port/db --->
         <!--- We use list operations for simplicity as regex can be brittle with special chars --->
         
-        <cfset local.cleanUrl = replaceNoCase(variables.env.DB_URL, "postgresql://", "")>
+        <!--- <cfset local.cleanUrl = replaceNoCase(variables.env.DB_URL, "postgresql://", "")>
         <cfset local.authPart = listFirst(local.cleanUrl, "@")>
         <cfset local.locPart = listRest(local.cleanUrl, "@")>
         
@@ -39,14 +39,14 @@
             "username": local.dbUser,
             "password": local.dbPass
         }>
-    <cfelse>
-        <cfset this.datasources["addressbook"] = {
-            "class": "org.postgresql.Driver",
-            "connectionString": "jdbc:postgresql://" & variables.env.DB_HOST & ":" & variables.env.DB_PORT & "/" & variables.env.DB_NAME & "?sslmode=require",
-            "username": variables.env.DB_USER,
-            "password": variables.env.DB_PASSWORD
-        }>
-    </cfif>
+    <cfelse> ---> --->
+    <cfset this.datasources["addressbook"] = {
+        "class": "org.postgresql.Driver",
+        "connectionString": "jdbc:postgresql://" & variables.env.DB_HOST & ":" & variables.env.DB_PORT & "/" & variables.env.DB_NAME & "?sslmode=require",
+        "username": variables.env.DB_USER,
+        "password": variables.env.DB_PASSWORD
+    }>
+    <!--- </cfif> --->
 
     <cffunction name="onApplicationStart" returnType="boolean" output="false">
         <cfset application.jwtSecret = this.jwtSecret>
