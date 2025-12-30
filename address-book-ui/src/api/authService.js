@@ -22,6 +22,15 @@ export const register = async (fullName, email, username, password) => {
   return response.data;
 };
 
+export const googleLogin = async (token) => {
+  const params = new URLSearchParams();
+  params.append('method', 'loginWithGoogle');
+  params.append('googleToken', token);
+
+  const response = await api.post('/routes/Auth.cfc', params);
+  return response.data;
+};
+
 export const logout = async () => {
   const refreshToken = localStorage.getItem('refreshToken');
   if (refreshToken) {

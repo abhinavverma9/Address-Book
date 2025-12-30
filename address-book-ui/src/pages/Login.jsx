@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { FaFacebookF, FaGoogle } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { useGoogleLogin } from '@react-oauth/google';
 import Header from '../components/Header';
 import InputField from '../components/InputField';
 import AuthLayout from '../components/AuthLayout';
 import Spinner from '../components/Spinner';
-import { loginUser, clearError } from '../store/slices/authSlice';
+import { loginUser, loginWithGoogle, clearError } from '../store/slices/authSlice';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -43,6 +44,21 @@ const Login = () => {
       console.error('Login failed', err);
     }
   };
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      console.log("Google Login Success:", tokenResponse);
+      try {
+        const resultAction = await dispatch(loginWithGoogle(tokenResponse.access_token));
+        if (loginWithGoogle.fulfilled.match(resultAction)) {
+          navigate('/dashboard');
+        }
+      } catch (err) {
+        console.error('Google login dispatch failed', err);
+      }
+    },
+    onError: errorResponse => console.error("Google Login Failed:", errorResponse),
+  });
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
@@ -84,7 +100,11 @@ const Login = () => {
             <button className="w-10 h-10 rounded-full bg-[#3b5998] text-white flex justify-center items-center hover:opacity-90 transition-opacity shadow-sm" type="button">
               <FaFacebookF size={18} />
             </button>
-            <button className="w-10 h-10 rounded-full bg-[#db4437] text-white flex justify-center items-center hover:opacity-90 transition-opacity shadow-sm" type="button">
+            <button 
+              onClick={() => googleLogin()}
+              className="w-10 h-10 rounded-full bg-[#db4437] text-white flex justify-center items-center hover:opacity-90 transition-opacity shadow-sm" 
+              type="button"
+            >
               <FaGoogle size={18} />
             </button>
           </div>
