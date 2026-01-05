@@ -1,0 +1,24 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: addressbook
+      TZ: Asia/Kolkata
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./api/db.sql:/docker-entrypoint-initdb.d/01_db.sql
+      - ./api/db_contacts.sql:/docker-entrypoint-initdb.d/02_db_contacts.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d addressbook"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

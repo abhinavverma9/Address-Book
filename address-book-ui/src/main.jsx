@@ -6,7 +6,7 @@ import { store } from './store'
 import './index.css'
 import App from './App.jsx'
 
-const GOOGLE_CLIENT_ID = "430685311388-6647dc5g05iofgs1iot0lo48u0tq7gju.apps.googleusercontent.com"; // TODO: Replace with your actual Google Client ID
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
