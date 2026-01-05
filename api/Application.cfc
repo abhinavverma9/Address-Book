@@ -18,35 +18,20 @@
         logsql = true,
         dbcreate = "update",
         cfclocation = "models",
-        dialect = "PostgreSQL"
+        dialect = "PostgreSQL",
+        flushAtRequestEnd = true,
+        autoManageSession = true,
+        eventHandling = true,
+        skipCFCWithError = true
     }>
 
     <!--- Define Datasource --->
-    <!--- <cfif structKeyExists(variables.env, "DB_URL") AND len(variables.env.DB_URL) GT 10>
-        <!--- Simple Parse DB_URL: postgresql://user:pass@host:port/db --->
-        <!--- We use list operations for simplicity as regex can be brittle with special chars --->
-        
-        <!--- <cfset local.cleanUrl = replaceNoCase(variables.env.DB_URL, "postgresql://", "")>
-        <cfset local.authPart = listFirst(local.cleanUrl, "@")>
-        <cfset local.locPart = listRest(local.cleanUrl, "@")>
-        
-        <cfset local.dbUser = listFirst(local.authPart, ":")>
-        <cfset local.dbPass = listRest(local.authPart, ":")>
-        
-        <cfset this.datasources["addressbook"] = {
-            "class": "org.postgresql.Driver",
-            "connectionString": "jdbc:postgresql://" & local.locPart & "?sslmode=require",
-            "username": local.dbUser,
-            "password": local.dbPass
-        }>
-    <cfelse> ---> --->
     <cfset this.datasources["addressbook"] = {
         "class": "org.postgresql.Driver",
-        "connectionString": "jdbc:postgresql://" & variables.env.DB_HOST & ":" & variables.env.DB_PORT & "/" & variables.env.DB_NAME & "?sslmode=require",
+        "connectionString": "jdbc:postgresql://" & variables.env.DB_HOST & ":" & variables.env.DB_PORT & "/" & variables.env.DB_NAME & "?TimeZone=UTC",
         "username": variables.env.DB_USER,
         "password": variables.env.DB_PASSWORD
     }>
-    <!--- </cfif> --->
 
     <cffunction name="onApplicationStart" returnType="boolean" output="false">
         <cfset application.jwtSecret = this.jwtSecret>
@@ -61,6 +46,8 @@
                 SELECT setval(pg_get_serial_sequence('refresh_tokens', 'id'), COALESCE(MAX(id), 0) + 1, false) FROM refresh_tokens;
             </cfquery>
         <cfcatch type="any">
+            <!--- Log error but don't fail application start --->
+            <cflog file="application" text="Error resetting sequences: #cfcatch.message#">
         </cfcatch>
         </cftry>
         <cfreturn true>
@@ -70,6 +57,13 @@
         <cfargument name="exception" required="true">
         <cfargument name="eventname" type="string" required="true">
         
+        <!--- Log error to file --->
+        <cflog file="error" text="Error in #arguments.eventname#: #arguments.exception.message# - #arguments.exception.detail#">
+        <cfsavecontent variable="local.errorDump">
+            <cfdump var="#arguments.exception#">
+        </cfsavecontent>
+        <cffile action="write" file="#getDirectoryFromPath(getCurrentTemplatePath())#/error.log" output="#local.errorDump#">
+
         <cfheader statuscode="500" statustext="Internal Server Error">
         <cfcontent type="application/json" reset="true">
         <cfoutput>#serializeJSON({
@@ -90,6 +84,11 @@
         <cfheader name="Access-Control-Allow-Methods" value="GET,POST,PUT,DELETE,OPTIONS">
         <cfheader name="Access-Control-Allow-Headers" value="Content-Type, Authorization">
         
+        <cfif structKeyExists(url, "reinit")>
+            <cfset onApplicationStart()>
+            <cfset ormReload()>
+        </cfif>
+
         <cfif getHttpRequestData().method EQ "OPTIONS">
             <cfabort>
         </cfif>

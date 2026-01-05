@@ -7,5 +7,15 @@
             "port":"8500"
         }
     },
-    "webroot":"."
+    "env":{},
+    "webroot":".",
+    "app":{
+        "lucee":{
+            "extensions":"3DCC2923-4560-466A-8E07-6B1F9377C859"
+        }
+    },
+    "forget":true,
+    "jvm":{
+        "args":"-Duser.timezone=UTC"
+    }
 }

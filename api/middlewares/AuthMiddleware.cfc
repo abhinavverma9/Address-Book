@@ -10,10 +10,11 @@
             "/auth/login",
             "/auth/register",
             "/auth/refreshtoken",
-            "/auth/logout"
+            "/auth/logout",
+            "test-db.cfm"
         ]>
         
-        <cfset variables.publicMethods = "login,register,refreshtoken,logout">
+        <cfset variables.publicMethods = "login,register,refreshtoken,logout,loginwithgoogle">
         
         <cfreturn this>
     </cffunction>
